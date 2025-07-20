@@ -1,0 +1,712 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: quality-certification
+  labels:
+    name: quality-certification
+    purpose: comprehensive-quality-management
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quality-cert-config
+  namespace: quality-certification
+data:
+  quality_standards.yaml: |
+    quality_standards:
+      code_coverage_threshold: 80.0
+      test_success_threshold: 95.0
+      security_vulnerability_threshold: 0
+      performance_threshold: 500.0
+      compliance_score_threshold: 90.0
+      
+    quality_levels:
+      diamond:
+        min_score: 95.0
+        requirements:
+          - "All compliance frameworks pass"
+          - "Zero security vulnerabilities"
+          - "Test coverage > 95%"
+          - "Performance under 200ms"
+      platinum:
+        min_score: 90.0
+        requirements:
+          - "Primary compliance frameworks pass"
+          - "No critical vulnerabilities"
+          - "Test coverage > 90%"
+      gold:
+        min_score: 80.0
+        requirements:
+          - "Core compliance requirements met"
+          - "Test coverage > 85%"
+      silver:
+        min_score: 70.0
+        requirements:
+          - "Basic compliance requirements met"
+          - "Test coverage > 80%"
+      bronze:
+        min_score: 60.0
+        requirements:
+          - "Minimum quality requirements met"
+    
+    compliance_frameworks:
+      HIPAA:
+        required_controls:
+          - "Data Encryption"
+          - "Access Controls"
+          - "Audit Logging"
+          - "Minimum Necessary"
+          - "Administrative Safeguards"
+          - "Physical Safeguards"
+          - "Technical Safeguards"
+      SOC2_TYPE2:
+        required_controls:
+          - "Security"
+          - "Availability"
+          - "Processing Integrity"
+          - "Confidentiality"
+          - "Privacy"
+      FDA_510K:
+        required_controls:
+          - "Software Validation"
+          - "Risk Management"
+          - "Change Control"
+          - "Documentation Control"
+          - "Clinical Evidence"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: quality-cert-secrets
+  namespace: quality-certification
+type: Opaque
+data:
+  # Base64 encoded values
+  digital_signature_key: bWVkaW5vdmFpX3F1YWxpdHlfY2VydF9rZXlfMjAyNA==
+  notification_webhook: aHR0cHM6Ly9ob29rcy5zbGFjay5jb20vc2VydmljZXMvVDAwMDAwMDAwL0IwMDAwMDAwMC9YWFhYWFhYWFhYWFhYWFhYWFhYWA==
+  email_smtp_password: cGFzc3dvcmRfZm9yX2VtYWlsX25vdGlmaWNhdGlvbnM=
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quality-certification-manager
+  namespace: quality-certification
+  labels:
+    app: quality-certification-manager
+    component: core
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: quality-certification-manager
+  template:
+    metadata:
+      labels:
+        app: quality-certification-manager
+        component: core
+    spec:
+      containers:
+      - name: quality-manager
+        image: medinovai/quality-certification-manager:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: DIGITAL_SIGNATURE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: quality-cert-secrets
+              key: digital_signature_key
+        - name: NOTIFICATION_WEBHOOK
+          valueFrom:
+            secretKeyRef:
+              name: quality-cert-secrets
+              key: notification_webhook
+        - name: DATABASE_URL
+          value: "postgresql://quality_user:quality_pass@quality-db:5432/quality_certs"
+        - name: REDIS_URL
+          value: "redis://quality-redis:6379/0"
+        - name: STORAGE_PATH
+          value: "/app/certificates"
+        volumeMounts:
+        - name: quality-config
+          mountPath: /app/config
+        - name: certificate-storage
+          mountPath: /app/certificates
+        - name: temp-storage
+          mountPath: /tmp
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      
+      volumes:
+      - name: quality-config
+        configMap:
+          name: quality-cert-config
+      - name: certificate-storage
+        persistentVolumeClaim:
+          claimName: quality-cert-storage
+      - name: temp-storage
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quality-certification-service
+  namespace: quality-certification
+  labels:
+    app: quality-certification-manager
+spec:
+  selector:
+    app: quality-certification-manager
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quality-cert-ui
+  namespace: quality-certification
+  labels:
+    app: quality-cert-ui
+    component: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: quality-cert-ui
+  template:
+    metadata:
+      labels:
+        app: quality-cert-ui
+        component: frontend
+    spec:
+      containers:
+      - name: ui
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: ui-content
+          mountPath: /usr/share/nginx/html
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      
+      volumes:
+      - name: ui-content
+        configMap:
+          name: quality-cert-ui-content
+      - name: nginx-config
+        configMap:
+          name: quality-cert-nginx-config
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quality-cert-nginx-config
+  namespace: quality-certification
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+        root /usr/share/nginx/html;
+        index index.html;
+        
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+        
+        location /api/ {
+            proxy_pass http://quality-certification-service:80/api/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+        
+        location /health {
+            proxy_pass http://quality-certification-service:80/health;
+        }
+    }
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quality-cert-ui-service
+  namespace: quality-certification
+  labels:
+    app: quality-cert-ui
+spec:
+  selector:
+    app: quality-cert-ui
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quality-db
+  namespace: quality-certification
+  labels:
+    app: quality-db
+    component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quality-db
+  template:
+    metadata:
+      labels:
+        app: quality-db
+        component: database
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_DB
+          value: "quality_certs"
+        - name: POSTGRES_USER
+          value: "quality_user"
+        - name: POSTGRES_PASSWORD
+          value: "quality_pass"
+        - name: PGDATA
+          value: "/var/lib/postgresql/data/pgdata"
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-init
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - quality_user
+            - -d
+            - quality_certs
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - quality_user
+            - -d
+            - quality_certs
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: quality-db-storage
+      - name: postgres-init
+        configMap:
+          name: quality-db-init
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quality-db-init
+  namespace: quality-certification
+data:
+  init.sql: |
+    -- Quality Certificates Database Schema
+    
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+    
+    -- Quality Certificates Table
+    CREATE TABLE quality_certificates (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        certificate_id VARCHAR(50) UNIQUE NOT NULL,
+        certificate_type VARCHAR(50) NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        subject_id VARCHAR(100) NOT NULL,
+        subject_name TEXT NOT NULL,
+        quality_level VARCHAR(20) NOT NULL,
+        overall_score DECIMAL(5,2) NOT NULL,
+        test_coverage DECIMAL(5,2),
+        test_success_rate DECIMAL(5,2),
+        security_scan_passed BOOLEAN DEFAULT FALSE,
+        business_rules_compliant BOOLEAN DEFAULT FALSE,
+        certificate_hash VARCHAR(64) NOT NULL,
+        digital_signature VARCHAR(128) NOT NULL,
+        issued_by VARCHAR(100) NOT NULL,
+        issued_to VARCHAR(100) NOT NULL,
+        issue_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expiry_date TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- Quality Metrics Table
+    CREATE TABLE quality_metrics (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        certificate_id VARCHAR(50) REFERENCES quality_certificates(certificate_id),
+        metric_name VARCHAR(100) NOT NULL,
+        metric_value DECIMAL(10,3) NOT NULL,
+        max_value DECIMAL(10,3) NOT NULL,
+        unit VARCHAR(20),
+        category VARCHAR(50),
+        weight DECIMAL(3,2),
+        threshold_pass DECIMAL(10,3),
+        threshold_excellent DECIMAL(10,3),
+        measured_at TIMESTAMP NOT NULL,
+        validation_method VARCHAR(100)
+    );
+    
+    -- Compliance Validations Table
+    CREATE TABLE compliance_validations (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        certificate_id VARCHAR(50) REFERENCES quality_certificates(certificate_id),
+        framework VARCHAR(50) NOT NULL,
+        compliant BOOLEAN NOT NULL,
+        compliance_score DECIMAL(5,2),
+        validated_controls TEXT[],
+        failed_controls TEXT[],
+        remediation_required TEXT[],
+        evidence_artifacts TEXT[],
+        validator_signature VARCHAR(64),
+        validation_date TIMESTAMP NOT NULL
+    );
+    
+    -- Certificate Relationships Table
+    CREATE TABLE certificate_relationships (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        parent_certificate_id VARCHAR(50) REFERENCES quality_certificates(certificate_id),
+        child_certificate_id VARCHAR(50) REFERENCES quality_certificates(certificate_id),
+        relationship_type VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- Audit Trail Table
+    CREATE TABLE audit_trail (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        certificate_id VARCHAR(50) REFERENCES quality_certificates(certificate_id),
+        action VARCHAR(100) NOT NULL,
+        description TEXT,
+        user_id VARCHAR(100),
+        system VARCHAR(100),
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        metadata JSONB
+    );
+    
+    -- Indexes for performance
+    CREATE INDEX idx_certificates_type ON quality_certificates(certificate_type);
+    CREATE INDEX idx_certificates_quality_level ON quality_certificates(quality_level);
+    CREATE INDEX idx_certificates_issue_date ON quality_certificates(issue_date);
+    CREATE INDEX idx_certificates_subject_id ON quality_certificates(subject_id);
+    CREATE INDEX idx_metrics_certificate_id ON quality_metrics(certificate_id);
+    CREATE INDEX idx_compliance_certificate_id ON compliance_validations(certificate_id);
+    CREATE INDEX idx_compliance_framework ON compliance_validations(framework);
+    CREATE INDEX idx_relationships_parent ON certificate_relationships(parent_certificate_id);
+    CREATE INDEX idx_relationships_child ON certificate_relationships(child_certificate_id);
+    CREATE INDEX idx_audit_certificate_id ON audit_trail(certificate_id);
+    CREATE INDEX idx_audit_timestamp ON audit_trail(timestamp);
+    
+    -- Sample data for testing
+    INSERT INTO quality_certificates (
+        certificate_id, certificate_type, title, description, subject_id, subject_name,
+        quality_level, overall_score, test_coverage, test_success_rate,
+        security_scan_passed, business_rules_compliant, certificate_hash,
+        digital_signature, issued_by, issued_to, expiry_date
+    ) VALUES (
+        'DEMO-CERT-12345678', 'task_completion', 
+        'Demo Quality Certificate', 'Demonstration certificate for system setup',
+        'demo_task_001', 'Demo Task Implementation', 'gold', 87.5,
+        92.0, 96.5, true, true, 
+        'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456',
+        'xyz789abc123def456ghi789jkl012mno345pqr678stu901vwx234yz567890ab',
+        'MedinovAI Quality System', 'Demo Development Team',
+        CURRENT_TIMESTAMP + INTERVAL '1 year'
+    );
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quality-db
+  namespace: quality-certification
+  labels:
+    app: quality-db
+spec:
+  selector:
+    app: quality-db
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quality-redis
+  namespace: quality-certification
+  labels:
+    app: quality-redis
+    component: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quality-redis
+  template:
+    metadata:
+      labels:
+        app: quality-redis
+        component: cache
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        command:
+        - redis-server
+        - --appendonly
+        - "yes"
+        - --maxmemory
+        - "512mb"
+        - --maxmemory-policy
+        - "allkeys-lru"
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      
+      volumes:
+      - name: redis-storage
+        persistentVolumeClaim:
+          claimName: quality-redis-storage
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quality-redis
+  namespace: quality-certification
+  labels:
+    app: quality-redis
+spec:
+  selector:
+    app: quality-redis
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: quality-cert-storage
+  namespace: quality-certification
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: quality-db-storage
+  namespace: quality-certification
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: quality-redis-storage
+  namespace: quality-certification
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: standard
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: quality-certification-ingress
+  namespace: quality-certification
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  tls:
+  - hosts:
+    - quality.medinovai.com
+    secretName: quality-cert-tls
+  rules:
+  - host: quality.medinovai.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: quality-cert-ui-service
+            port:
+              number: 80
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: quality-cert-maintenance
+  namespace: quality-certification
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: maintenance
+            image: medinovai/quality-certification-manager:latest
+            command:
+            - python
+            - -c
+            - |
+              import asyncio
+              from quality_certification.comprehensive_quality_manager import ComprehensiveQualityManager
+              
+              async def maintenance():
+                  manager = ComprehensiveQualityManager()
+                  
+                  # Cleanup expired certificates
+                  await manager.cleanup_expired_certificates()
+                  
+                  # Generate daily analytics
+                  await manager.generate_daily_analytics_report()
+                  
+                  # Backup certificates
+                  await manager.backup_certificates()
+                  
+                  print("Daily maintenance completed successfully")
+              
+              asyncio.run(maintenance())
+            env:
+            - name: DATABASE_URL
+              value: "postgresql://quality_user:quality_pass@quality-db:5432/quality_certs"
+            volumeMounts:
+            - name: certificate-storage
+              mountPath: /app/certificates
+          volumes:
+          - name: certificate-storage
+            persistentVolumeClaim:
+              claimName: quality-cert-storage
+          restartPolicy: OnFailure
+
+---
+apiVersion: v1
+kind: ServiceMonitor
+metadata:
+  name: quality-certification-monitor
+  namespace: quality-certification
+  labels:
+    app: quality-certification-manager
+spec:
+  selector:
+    matchLabels:
+      app: quality-certification-manager
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s 
