@@ -1,0 +1,196 @@
+repository_standards:
+  version: 2.0.0
+  last_updated: '2025-07-22T10:38:21.264909Z'
+  repository:
+    name: medinovai-quality-certification
+    type: microservice
+    domain: compliance
+    priority: high
+    description: '{{REPOSITORY_DESCRIPTION}}'
+  standards_level: '{{STANDARDS_LEVEL}}'
+ai_features:
+  code_quality_analysis: enabled
+  security_scanning: continuous
+  performance_optimization: automated
+  documentation_generation: ai-powered
+  test_generation: intelligent
+  incident_response: autonomous
+  self_healing: enabled
+  learning_enabled: true
+  anomaly_detection: true
+  predictive_analysis: true
+compliance:
+  hipaa: '{{HIPAA_REQUIREMENT}}'
+  fda: required
+  gdpr: '{{GDPR_REQUIREMENT}}'
+  iso_13485: required
+  hitrust: required
+  soc2: required
+security:
+  authentication:
+    method: jwt
+    mfa_required: true
+    session_timeout: 900
+  authorization:
+    method: rbac
+    principle: least_privilege
+  encryption:
+    at_rest: aes_256_gcm
+    in_transit: tls_1_3
+    key_management: aws_kms
+    key_rotation: 90
+  vulnerability_management:
+    scanning_frequency: continuous
+    critical_fix_time: 24
+    high_fix_time: 168
+  audit_logging:
+    enabled: true
+    user_actions: true
+    data_access: true
+    system_changes: true
+    retention_period: 2555
+quality:
+  testing:
+    unit_test_coverage: 90
+    integration_test_coverage: 80
+    e2e_test_coverage: 70
+    performance_test_required: true
+    security_test_required: true
+  code_review:
+    required: true
+    minimum_reviewers: 2
+    ai_powered: true
+    security_review: true
+  static_analysis:
+    enabled: true
+    complexity_threshold: 10
+    duplication_threshold: 3
+    maintainability_rating: A
+  documentation:
+    api_documentation: true
+    architecture_documentation: true
+    security_documentation: true
+    user_documentation: true
+monitoring:
+  health_checks:
+    liveness_probe: true
+    readiness_probe: true
+    startup_probe: true
+  metrics:
+    application_metrics: true
+    infrastructure_metrics: true
+    business_metrics: true
+    security_metrics: true
+  logging:
+    structured_logging: true
+    log_level: INFO
+    sensitive_data_filtering: true
+  alerting:
+    sla_based_alerts: true
+    predictive_alerts: true
+    escalation_policies: true
+  observability:
+    distributed_tracing: true
+    metrics_collection: prometheus
+    log_aggregation: elasticsearch
+    visualization: grafana
+performance:
+  response_time:
+    api_endpoints: 200
+    database_queries: 100
+    page_load: 2000
+  throughput:
+    minimum_rps: 1000
+    target_rps: 5000
+    peak_rps: 10000
+  availability:
+    target: 99.9
+    measurement_period: monthly
+  scalability:
+    horizontal_scaling: true
+    auto_scaling: true
+    load_testing: true
+deployment:
+  containerization:
+    required: true
+    base_images: approved_only
+    image_scanning: true
+    multi_stage_builds: true
+  orchestration:
+    platform: kubernetes
+    resource_requests: true
+    resource_limits: true
+    health_checks: true
+  ci_cd:
+    platform: github_actions
+    automated_testing: true
+    security_scanning: true
+    quality_gates: true
+    automated_deployment: true
+  environments:
+    development: true
+    staging: true
+    production: true
+data:
+  classification:
+    phi_handling: '{{PHI_HANDLING}}'
+    pii_handling: '{{PII_HANDLING}}'
+  protection:
+    encryption_required: true
+    access_controls: strict
+    audit_trail: comprehensive
+  retention:
+    policy_defined: true
+    automated_purging: true
+    compliance_period: 2555
+  backup:
+    automated_backup: true
+    backup_frequency: daily
+    backup_retention: 90
+    disaster_recovery: true
+learning:
+  pattern_recognition: true
+  automated_fixes: true
+  process_optimization: true
+  knowledge_sharing: true
+  feedback_integration: true
+auditing:
+  automated_auditing: true
+  compliance_checking: true
+  security_assessment: true
+  quality_assessment: true
+  audit_frequency: continuous
+enforcement:
+  mandatory_files:
+  - .medinovai-standards.yaml
+  - README.md
+  - CHANGELOG.md
+  - CONTRIBUTING.md
+  - LICENSE
+  - .gitignore
+  mandatory_directories:
+  - .github/workflows
+  - docs
+  - tests
+  - scripts
+  - config
+  quality_gates:
+    test_coverage: 90
+    security_scan: pass
+    performance_test: pass
+    compliance_check: pass
+placeholders:
+  repository_name: '{{REPOSITORY_NAME}}'
+  repository_type: '{{REPOSITORY_TYPE}}'
+  repository_domain: '{{REPOSITORY_DOMAIN}}'
+  repository_priority: '{{REPOSITORY_PRIORITY}}'
+  repository_description: '{{REPOSITORY_DESCRIPTION}}'
+  standards_level: '{{STANDARDS_LEVEL}}'
+  hipaa_requirement: '{{HIPAA_REQUIREMENT}}'
+  fda_requirement: '{{FDA_REQUIREMENT}}'
+  gdpr_requirement: '{{GDPR_REQUIREMENT}}'
+  iso_requirement: '{{ISO_REQUIREMENT}}'
+  hitrust_requirement: '{{HITRUST_REQUIREMENT}}'
+  soc2_requirement: '{{SOC2_REQUIREMENT}}'
+  phi_handling: '{{PHI_HANDLING}}'
+  pii_handling: '{{PII_HANDLING}}'
